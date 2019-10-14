@@ -1,0 +1,35 @@
+plugins {
+    id 'groovy'
+    id 'application'
+}
+
+application {
+    mainClassName = 'Calculator'
+}
+
+version '1.0'
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencies {
+    compile 'org.codehaus.groovy:groovy-all:2.3.11'
+    implementation "com.sample.math:mathutil:1.0"
+}
+
+//
+tasks.register("enableComposite") {
+    doFirst {
+        def file = new File("composite-enable")
+        if (!file.exists()) file.createNewFile()
+    }
+}
+
+tasks.register("disableComposite") {
+    doFirst {
+        def file = new File("composite-enable")
+        if (file.exists()) file.delete()
+    }
+}

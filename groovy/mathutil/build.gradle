@@ -1,0 +1,28 @@
+plugins {
+    id 'groovy'
+    id 'maven-publish'
+}
+
+group 'com.sample.math'
+version '1.0'
+
+
+repositories {
+    mavenCentral()
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = "com.sample.math"
+            artifactId = "mathutil"
+            version = "1.0"
+
+            from components.java
+        }
+    }
+}
+
+dependencies {
+    compile 'org.codehaus.groovy:groovy-all:2.3.11'
+}
