@@ -1,9 +1,9 @@
 rootProject.name = 'calculator'
 
-if (new File("composite-enable").exists() && new File("../mathutil").exists()) {
+if (file("../composite-enable").exists() && file("../mathutil").exists()) {
     includeBuild("../mathutil") {
         dependencySubstitution {
-            substitute(module("com.sample.math:mathutil")).with(project(":"))
+            substitute module('com.sample.math:mathutil') with project(':')
         }
     }
 }

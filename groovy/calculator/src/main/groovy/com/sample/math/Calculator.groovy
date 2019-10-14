@@ -1,6 +1,6 @@
 package com.sample.math
 
-import com.sample.math.StringEvaluator
+import com.sample.math.OperationMath
 
 class Calculator {
 

@@ -4,7 +4,7 @@ plugins {
 }
 
 application {
-    mainClassName = 'Calculator'
+    mainClassName = 'com.sample.math.Calculator'
 }
 
 version '1.0'
@@ -22,14 +22,14 @@ dependencies {
 //
 tasks.register("enableComposite") {
     doFirst {
-        def file = new File("composite-enable")
+        def file = file("composite-enable")
         if (!file.exists()) file.createNewFile()
     }
 }
 
 tasks.register("disableComposite") {
     doFirst {
-        def file = new File("composite-enable")
+        def file = file("composite-enable")
         if (file.exists()) file.delete()
     }
 }
