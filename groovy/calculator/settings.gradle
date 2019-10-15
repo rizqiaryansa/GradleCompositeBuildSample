@@ -7,3 +7,5 @@ if (file("../composite-enable").exists() && file("../mathutil").exists()) {
         }
     }
 }
+
+apply from: "../../tools/composite_build_settings.gradle"
