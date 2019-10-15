@@ -1,20 +1,23 @@
 plugins {
+    id 'java'
     id 'groovy'
     id 'maven-publish'
 }
 
-group 'com.sample.math'
-version '1.0'
+group 'mathutil'
+version '1.0-SNAPSHOT'
 
+sourceCompatibility = 1.8
 
 repositories {
     mavenCentral()
 }
 
+
 publishing {
     publications {
         maven(MavenPublication) {
-            groupId = "com.sample.math"
+            groupId = 'mathutil'
             artifactId = "mathutil"
             version = "1.0"
 
@@ -25,5 +28,7 @@ publishing {
 
 dependencies {
     implementation 'org.codehaus.groovy:groovy-all:2.3.11'
-//    implementation project(":mathutil")
+    testImplementation group: 'junit', name: 'junit', version: '4.12'
+    implementation project(":mathutil1")
+    implementation project(":mathutil1")
 }

@@ -16,7 +16,7 @@ repositories {
 
 dependencies {
     compile 'org.codehaus.groovy:groovy-all:2.3.11'
-    implementation "com.sample.math:mathutil:1.0"
+    implementation "mathutil:mathutil:1.0"
 }
 
 //
