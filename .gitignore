@@ -1,1 +1,4 @@
 # Project exclude paths
+.composite-enable
+build/*
+.idea/
