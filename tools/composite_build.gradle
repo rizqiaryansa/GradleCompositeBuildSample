@@ -41,5 +41,4 @@ if (new File("${rootDir}/.compositeScan-enable").exists()) {
             }
         }
     }
-
 }

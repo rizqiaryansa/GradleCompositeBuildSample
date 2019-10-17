@@ -1,3 +1,9 @@
+import java.util.concurrent.ForkJoinPool
+import java.util.concurrent.RecursiveAction
+
+Map<String, Project> compositeProjects = new HashMap<String, Project>()
+Map<String, String> includedProjects = new HashMap<String, String>()
+
 class Project {
     static final int TYPE_COMPOSITE_PROJECT = 1
     static final int TYPE_INCLUDED_PROJECT = 2
@@ -32,23 +38,52 @@ class Project {
     }
 }
 
-// key = path, value = the project itself
-def compositeProjects = new HashMap<String, Project>()
+class ForkJoinFileProcessor extends RecursiveAction {
 
-if (new File("$rootDir/.compositeScan-enable").exists()) {
-    gradle.ext.compositeProjects = new ArrayList<String>()
-    // get all setting files
-    def settingFileTree = fileTree(dir: rootDir, include: ['**/settings.gradle', '**/settings.gradle.kts', '**/build.gradle', '**/build.gradle.kts'])
-    settingFileTree.each {
-        compositeProjects.putIfAbsent(it.path.replaceAll("/settings.gradle|/build.gradle|.kts", ""), new Project(it))
+    static String rootDir
+    static Map<String, String> includedProjects
+
+    Map<String, Project> compositeProjects
+
+    ForkJoinFileProcessor(Map<String, Project> compositeProjects, String rootDir, Map<String, String> includedProjects) {
+        this.compositeProjects = compositeProjects
+        this.rootDir = rootDir
+        this.includedProjects = includedProjects
     }
 
-    def iterator = compositeProjects.entrySet().iterator()
-    // key -> project name, value -> it's path
-    def includedProjects = new HashMap<String, String>()
+    ForkJoinFileProcessor(Map<String, Project> compositeProjects) {
+        this.compositeProjects = compositeProjects
+    }
 
-    while (iterator.hasNext()) {
-        def compositeProject = iterator.next()
+    @Override
+    protected void compute() {
+        if (compositeProjects.size() > 1) {
+            createSubTasks()
+        } else {
+            processFile()
+        }
+    }
+
+    void createSubTasks() {
+        List<RecursiveAction> forks = new ArrayList<>()
+
+        Iterator iterator = compositeProjects.entrySet().iterator()
+        while (iterator.hasNext()) {
+            def pair = iterator.next()
+            def map = new HashMap<String, Project>()
+            map.put(pair.key, pair.value)
+            ForkJoinFileProcessor task = new ForkJoinFileProcessor(map)
+            forks.add(task)
+            task.fork()
+        }
+
+        for (RecursiveAction task: forks) {
+            task.join()
+        }
+    }
+
+    void processFile() {
+        def compositeProject = compositeProjects.entrySet().iterator().next()
         if (rootDir.toString() != compositeProject.key.toString() && compositeProject.value.projectType == Project.TYPE_COMPOSITE_PROJECT) {
             compositeProject.value.settingsGradleFile.eachLine { line ->
                 if (line.startsWith("include") && !line.startsWith("includeBuild")) {
@@ -76,37 +111,49 @@ if (new File("$rootDir/.compositeScan-enable").exists()) {
                 }
             }
         }
-    }
 
-    // add the included projects to composite project list if not present
-    includedProjects.entrySet().each {
-        if (!compositeProjects.containsKey(it.value)) {
-            def settingsGradleFile = new File("${it.value}/settings.gradle")
-            if (!settingsGradleFile.exists()) {
-                settingsGradleFile = new File("${it.value}/settings.gradle.kts")
-            }
-            if (settingsGradleFile.exists()) {
-                compositeProjects.putIfAbsent(it.value, new Project(settingsGradleFile))
-            } else {
-                compositeProjects.putIfAbsent(it.value, new Project(it.value.toString(), Project.TYPE_INCLUDED_PROJECT))
+        // add the included projects to composite project list if not present
+        includedProjects.entrySet().each {
+            if (!compositeProjects.containsKey(it.value)) {
+                def settingsGradleFile = new File("${it.value}/settings.gradle")
+                if (!settingsGradleFile.exists()) {
+                    settingsGradleFile = new File("${it.value}/settings.gradle.kts")
+                }
+                if (settingsGradleFile.exists()) {
+                    compositeProjects.putIfAbsent(it.value, new Project(settingsGradleFile))
+                } else {
+                    compositeProjects.putIfAbsent(it.value, new Project(it.value.toString(), Project.TYPE_INCLUDED_PROJECT))
+                }
             }
         }
-    }
 
-    // now we need to read each project build.gradle file in order to get it's groupId and artifactId
-    compositeProjects.each { project ->
-        if (rootDir.toString() != project.key.toString()) {
-            project.value.buildGradleFile.eachLine {
-                if (it.trim().startsWith("groupId")) {
-                    project.value.groupId = it.split("[\'\"]")[1]
-                } else if (it.trim().startsWith("artifactId")) {
-                    project.value.artifactId = it.split("[\'\"]")[1]
+        // now we need to read each project build.gradle file in order to get it's groupId and artifactId
+        compositeProjects.each { project ->
+            if (rootDir.toString() != project.key.toString()) {
+                project.value.buildGradleFile.eachLine {
+                    if (it.trim().startsWith("groupId")) {
+                        project.value.groupId = it.split("[\'\"]")[1]
+                    } else if (it.trim().startsWith("artifactId")) {
+                        project.value.artifactId = it.split("[\'\"]")[1]
+                    }
                 }
             }
         }
     }
+}
 
-    iterator = compositeProjects.entrySet().iterator()
+if (new File("$rootDir/.compositeScan-enable").exists()) {
+    gradle.ext.compositeProjects = new ArrayList<String>()
+    // get all setting files
+    def settingFileTree = fileTree(dir: rootDir, include: ['**/settings.gradle', '**/settings.gradle.kts', '**/build.gradle', '**/build.gradle.kts'])
+    settingFileTree.each {
+        compositeProjects.putIfAbsent(it.path.replaceAll("/settings.gradle|/build.gradle|.kts", ""), new Project(it))
+    }
+
+    ForkJoinPool forkJoinPool = new ForkJoinPool(10)
+    forkJoinPool.invoke(new ForkJoinFileProcessor(compositeProjects, rootDir.path, includedProjects))
+
+    def iterator = compositeProjects.entrySet().iterator()
 
     while (iterator.hasNext()) {
         def pair = iterator.next()
@@ -115,10 +162,8 @@ if (new File("$rootDir/.compositeScan-enable").exists()) {
                 gradle.ext.compositeProjects.add(pair.key.toString())
             }
             if (pair.value.projectType != Project.TYPE_UNUSED_PROJECT || new File("${pair.key}/.composite-enable").exists()) {
-                println "Including project ${pair.key} type ${pair.value.projectType}"
                 includeBuild(pair.key) {
                     if (pair.value.artifactId != null && pair.value.groupId != null) {
-                        println "Substituting module ${pair.value.groupId}:${pair.value.artifactId} with project ${pair.value.artifactId}"
                         dependencySubstitution {
                             substitute module("${pair.value.groupId}:${pair.value.artifactId}") with project(":")
                         }
