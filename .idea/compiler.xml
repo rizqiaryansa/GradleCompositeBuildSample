@@ -2,10 +2,44 @@
 <project version="4">
   <component name="CompilerConfiguration">
     <bytecodeTargetLevel>
+      <module name="calculator.main" target="1.8" />
+      <module name="Calculator.main" target="1.8" />
+      <module name="calculator.mathutil.main" target="1.8" />
+      <module name="calculator.mathutil.test" target="1.8" />
+      <module name="calculator.test" target="1.8" />
+      <module name="Calculator.test" target="1.8" />
       <module name="GradleCompositeBuildExample.calculator.main" target="1.8" />
       <module name="GradleCompositeBuildExample.calculator.test" target="1.8" />
+      <module name="GradleCompositeBuildExample.groovy.calculator.main" target="1.8" />
+      <module name="GradleCompositeBuildExample.groovy.calculator.test" target="1.8" />
+      <module name="GradleCompositeBuildExample.groovy.mathutil.main" target="1.8" />
+      <module name="GradleCompositeBuildExample.groovy.mathutil.mathutil0.main" target="1.8" />
+      <module name="GradleCompositeBuildExample.groovy.mathutil.mathutil0.test" target="1.8" />
+      <module name="GradleCompositeBuildExample.groovy.mathutil.mathutil1.main" target="1.8" />
+      <module name="GradleCompositeBuildExample.groovy.mathutil.mathutil1.test" target="1.8" />
+      <module name="GradleCompositeBuildExample.groovy.mathutil.mathutil2.main" target="1.8" />
+      <module name="GradleCompositeBuildExample.groovy.mathutil.mathutil2.test" target="1.8" />
+      <module name="GradleCompositeBuildExample.groovy.mathutil.test" target="1.8" />
+      <module name="GradleCompositeBuildExample.kotlin.Calculator.main" target="1.8" />
+      <module name="GradleCompositeBuildExample.kotlin.Calculator.test" target="1.8" />
       <module name="GradleCompositeBuildExample.mathutil.main" target="1.8" />
       <module name="GradleCompositeBuildExample.mathutil.test" target="1.8" />
+      <module name="mathutil.main" target="1.8" />
+      <module name="MathUtil.main" target="1.8" />
+      <module name="mathutil.mathutil0.main" target="1.8" />
+      <module name="mathutil.mathutil0.test" target="1.8" />
+      <module name="mathutil.mathutil1.main" target="1.8" />
+      <module name="mathutil.mathutil1.test" target="1.8" />
+      <module name="mathutil.mathutil2.main" target="1.8" />
+      <module name="mathutil.mathutil2.test" target="1.8" />
+      <module name="MathUtil.test" target="1.8" />
+      <module name="mathutil.test" target="1.8" />
+      <module name="mathutil0.main" target="1.8" />
+      <module name="mathutil0.test" target="1.8" />
+      <module name="mathutil1.main" target="1.8" />
+      <module name="mathutil1.test" target="1.8" />
+      <module name="mathutil2.main" target="1.8" />
+      <module name="mathutil2.test" target="1.8" />
     </bytecodeTargetLevel>
   </component>
 </project>

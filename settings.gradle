@@ -1,3 +1,4 @@
 rootProject.name = 'GradleCompositeBuildExample'
 
 apply from: "tools/composite_build_settings.gradle"
+

@@ -1,11 +1,11 @@
 plugins {
-    id 'groovy'
     id 'java'
+    id 'groovy'
     id 'maven-publish'
 }
 
-group 'mathutil1'
-version '1.0-SNAPSHOT'
+group 'com.sample.math'
+version '1.0'
 
 sourceCompatibility = 1.8
 
@@ -17,10 +17,11 @@ repositories {
     }
 }
 
+
 publishing {
     publications {
         maven(MavenPublication) {
-            groupId = 'mathutil1'
+            groupId = 'com.sample.math'
             artifactId = "mathutil1"
             version = "1.0"
 

@@ -1,75 +1,122 @@
+class Project {
+    static final int TYPE_COMPOSITE_PROJECT = 1
+    static final int TYPE_INCLUDED_PROJECT = 2
+    static final int TYPE_UNUSED_PROJECT = 3
 
-//scan all folder find setting.gradle
-class compositeModel {
-    String pathComposite
-    List<tupleComposite> listModuleComposite = new ArrayList<>()
+    def settingsGradleFile
+    def buildGradleFile
+    def groupId
+    def artifactId
+    def projectType
 
-    compositeModel(String pathComposite) {
-        this.pathComposite = pathComposite.replace("/settings.gradle", "")
+    Project(File settingsFile) {
+        this.settingsGradleFile = settingsFile
+        this.buildGradleFile = new File(settingsFile.path.replace("settings", "build"))
+        if (isCompositeProject(settingsFile.path.replaceAll("/settings.gradle|.kts", ""))) {
+            this.projectType = TYPE_COMPOSITE_PROJECT
+        } else {
+            this.projectType = TYPE_UNUSED_PROJECT
+        }
     }
 
-    def setList(List<tupleComposite> listModuleComposite) {
-        this.listModuleComposite = listModuleComposite
+    Project(String path, int projectType) {
+        this.buildGradleFile = new File("$path/build.gradle")
+        if (!this.buildGradleFile.exists()) {
+            this.buildGradleFile = new File("$path/build.gradle.kts")
+        }
+        this.projectType = projectType
+    }
+
+    def isCompositeProject(String path) {
+        return new File("$path/.composite-enable").exists()
     }
 }
-class tupleComposite {
-    String module;
-    String project;
-    String moduleName;
 
-    tupleComposite(String project, String module, String moduleName) {
-        this.project = project
-        this.module = module
-        this.moduleName = moduleName
-    }
-}
-List<compositeModel> pathComposite = new ArrayList<>()
+// key = path, value = the project itself
+def compositeProjects = new HashMap<String, Project>()
 
 if (new File("$rootDir/.compositeScan-enable").exists()) {
-    def fileTreeComposite = fileTree(dir: "${rootDir}", include: '**/settings.gradle')
-    fileTreeComposite.each { file ->
-        println file
-        pathComposite.add(new compositeModel("$file"))
-    }
-    pathComposite.each { file ->
-        List<String> listModule = new ArrayList<>()
-        if ("$rootDir" != file.pathComposite) {
-            new File("${file.pathComposite}/settings.gradle").eachLine { line ->
-                if (line.startsWith("include") && line.contains(",")) {
-                    def tempString = line.replace("include ", "").split(",")
-                    tempString.each {
-                        listModule.add("${it.replace("\'", "").replace(":", "").replace(" ", "").trim()}")
-                    }
-                } else if (line.startsWith("include")) {
-                    listModule.add("${line.replace("include \":", "").replace("\"", "").trim()}")
-                }
-            }
-        }
-        List<tupleComposite> tupleComposite = new ArrayList<>()
-        listModule.each { module ->
-            def groupId
-            def artifactId
-            new File("${file.pathComposite}/$module/build.gradle").eachLine {
-                if (it.trim().startsWith("groupId")) {
-                    groupId = it.replace("groupId =", "").replace("\'", "").trim()
-                }
-                if (it.trim().startsWith("artifactId")) {
-                    artifactId = it.replace("artifactId =", "").replace("\'", "").trim()
-                }
-            }
-            tupleComposite.add(new tupleComposite(groupId, artifactId, module))
-        }
-        file.setList(tupleComposite)
+    // get all setting files
+    def settingFileTree = fileTree(dir: rootDir, include: ['**/settings.gradle', '**/settings.gradle.kts', '**/build.gradle', '**/build.gradle.kts'])
+    settingFileTree.each {
+        compositeProjects.putIfAbsent(it.path.replaceAll("/settings.gradle|/build.gradle|.kts", ""), new Project(it))
     }
 
-    pathComposite.each { file ->
-        if ("$rootDir" != file.pathComposite) {
-            if (new File("${file.pathComposite}/.composite-enable").exists()) {
-                println "Including Build " + "${file.pathComposite.replace("$rootDir/", "").trim()}"
-                includeBuild("${file.pathComposite.replace("$rootDir/", "").trim()}") {
-                    dependencySubstitution {
-                        file.listModuleComposite.each {
-                            substitute module("${it.project}:${it.module}") with project(":${it.moduleName}")
+    def iterator = compositeProjects.entrySet().iterator()
+    // key -> project name, value -> it's path
+    def includedProjects = new HashMap<String, String>()
+
+    while (iterator.hasNext()) {
+        def compositeProject = iterator.next()
+        if (rootDir.toString() != compositeProject.key.toString() && compositeProject.value.projectType == Project.TYPE_COMPOSITE_PROJECT) {
+            compositeProject.value.settingsGradleFile.eachLine { line ->
+                if (line.startsWith("include") && !line.startsWith("includeBuild")) {
+                    String[] tempString = line.split("[\'\"]")
+                    for (int i = 1; i < tempString.size(); i += 2) {
+                        includedProjects.put(tempString[i],
+                                "${compositeProject.key}${tempString[i].replace(":", "/")}")
+                    }
+                } else if (line.contains("projectDir")) {
+                    String[] tempString = line.split("[\'\"]")
+                    // we already get it's relative path (Ex: ../../xxProject or /a/b/c/xxProject)
+                    // we need to get it's absolute path (Ex: /Users/nakama/ProjectA/xxProject)
+                    def relativePath = tempString[3].split("/")
+                    def absolutePath = compositeProject.key.split("/").toList()
+
+                    relativePath.each {
+                        if (it == "..") {
+                            absolutePath.removeLast()
+                        } else if (!it.empty) {
+                            absolutePath.add(it)
+                        }
+                    }
+
+                    includedProjects.put(tempString[1], absolutePath.join("/"))
+                }
+            }
+        }
+    }
+
+    // add the included projects to composite project list if not present
+    includedProjects.entrySet().each {
+        if (!compositeProjects.containsKey(it.value)) {
+            def settingsGradleFile = new File("${it.value}/settings.gradle")
+            if (!settingsGradleFile.exists()) {
+                settingsGradleFile = new File("${it.value}/settings.gradle.kts")
+            }
+            if (settingsGradleFile.exists()) {
+                compositeProjects.putIfAbsent(it.value, new Project(settingsGradleFile))
+            } else {
+                compositeProjects.putIfAbsent(it.value, new Project(it.value.toString(), Project.TYPE_INCLUDED_PROJECT))
+            }
+        }
+    }
+
+    // now we need to read each project build.gradle file in order to get it's groupId and artifactId
+    compositeProjects.each { project ->
+        if (rootDir.toString() != project.key.toString()) {
+            project.value.buildGradleFile.eachLine {
+                if (it.trim().startsWith("groupId")) {
+                    project.value.groupId = it.split("[\'\"]")[1]
+                } else if (it.trim().startsWith("artifactId")) {
+                    project.value.artifactId = it.split("[\'\"]")[1]
+                }
+            }
+        }
+    }
+
+    iterator = compositeProjects.entrySet().iterator()
+
+    while (iterator.hasNext()) {
+        def pair = iterator.next()
+        if (pair.key != rootDir.toString()) {
+            if (pair.value.projectType != Project.TYPE_UNUSED_PROJECT || new File("${pair.key}/.composite-enable").exists()) {
+                println "Including project ${pair.key} type ${pair.value.projectType}"
+                includeBuild(pair.key) {
+                    if (pair.value.artifactId != null && pair.value.groupId != null) {
+                        println "Substituting module ${pair.value.groupId}:${pair.value.artifactId} with project ${pair.value.artifactId}"
+                        dependencySubstitution {
+                            substitute module("${pair.value.groupId}:${pair.value.artifactId}") with project(":")
                         }
                     }
                 }

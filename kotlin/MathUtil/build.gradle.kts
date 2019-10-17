@@ -30,4 +30,10 @@ publishing {
             from(components["java"])
         }
     }
+    repositories {
+        maven {
+            name = "internalRepo"
+            setUrl("../../repo")
+        }
+    }
 }
