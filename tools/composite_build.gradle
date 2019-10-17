@@ -18,15 +18,7 @@ task("disableComposite") {
 }
 
 if (new File("${rootDir}/.compositeScan-enable").exists()) {
-    def projectFileTree = fileTree(dir: rootDir, include: ['**/settings.gradle', '**/settings.gradle.kts', '**/build.gradle', '**/build.gradle.kts'])
-    def pathList = new ArrayList<String>()
-    projectFileTree.each {
-        def path = it.path.replaceAll("/settings.gradle|/build.gradle|.kts", "")
-        if (!pathList.contains(path)) {
-            pathList.add(path)
-        }
-    }
-    pathList.each { path ->
+    gradle.ext.compositeProjects.each { path ->
         if (!"$rootDir".equals("${path}")) {
             def lastPaths = path.replace("$rootDir/", "").replace("\"", "").trim().split("/")
             def lastPath = lastPaths[lastPaths.size() - 1]

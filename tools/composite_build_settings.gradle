@@ -36,6 +36,7 @@ class Project {
 def compositeProjects = new HashMap<String, Project>()
 
 if (new File("$rootDir/.compositeScan-enable").exists()) {
+    gradle.ext.compositeProjects = new ArrayList<String>()
     // get all setting files
     def settingFileTree = fileTree(dir: rootDir, include: ['**/settings.gradle', '**/settings.gradle.kts', '**/build.gradle', '**/build.gradle.kts'])
     settingFileTree.each {
@@ -110,6 +111,9 @@ if (new File("$rootDir/.compositeScan-enable").exists()) {
     while (iterator.hasNext()) {
         def pair = iterator.next()
         if (pair.key != rootDir.toString()) {
+            if (!gradle.ext.compositeProjects.contains(pair.key.toString())) {
+                gradle.ext.compositeProjects.add(pair.key.toString())
+            }
             if (pair.value.projectType != Project.TYPE_UNUSED_PROJECT || new File("${pair.key}/.composite-enable").exists()) {
                 println "Including project ${pair.key} type ${pair.value.projectType}"
                 includeBuild(pair.key) {
