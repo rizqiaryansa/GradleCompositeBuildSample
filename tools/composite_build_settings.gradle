@@ -28,6 +28,7 @@ List<compositeModel> pathComposite = new ArrayList<>()
 if (new File("$rootDir/.compositeScan-enable").exists()) {
     def fileTreeComposite = fileTree(dir: "${rootDir}", include: '**/settings.gradle')
     fileTreeComposite.each { file ->
+        println file
         pathComposite.add(new compositeModel("$file"))
     }
     pathComposite.each { file ->
@@ -64,6 +65,7 @@ if (new File("$rootDir/.compositeScan-enable").exists()) {
     pathComposite.each { file ->
         if ("$rootDir" != file.pathComposite) {
             if (new File("${file.pathComposite}/.composite-enable").exists()) {
+                println "Including Build " + "${file.pathComposite.replace("$rootDir/", "").trim()}"
                 includeBuild("${file.pathComposite.replace("$rootDir/", "").trim()}") {
                     dependencySubstitution {
                         file.listModuleComposite.each {

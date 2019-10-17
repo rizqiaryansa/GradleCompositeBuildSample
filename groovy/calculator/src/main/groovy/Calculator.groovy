@@ -1,5 +1,3 @@
-package com.sample.math
-
 import com.sample.math.OperationMath
 
 class Calculator {

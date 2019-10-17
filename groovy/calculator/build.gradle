@@ -4,32 +4,20 @@ plugins {
 }
 
 application {
-    mainClassName = 'com.sample.math.Calculator'
+    mainClassName = 'Calculator'
 }
 
 version '1.0'
 
 repositories {
     mavenCentral()
-    mavenLocal()
+    maven {
+        name = "internalRepo"
+        url = "../../repo"
+    }
 }
 
 dependencies {
     compile 'org.codehaus.groovy:groovy-all:2.3.11'
-    implementation "mathutil:mathutil:1.0"
-}
-
-//
-tasks.register("enableComposite") {
-    doFirst {
-        def file = file("composite-enable")
-        if (!file.exists()) file.createNewFile()
-    }
-}
-
-tasks.register("disableComposite") {
-    doFirst {
-        def file = file("composite-enable")
-        if (file.exists()) file.delete()
-    }
+    implementation "com.sample.math:mathutil:1.0"
 }

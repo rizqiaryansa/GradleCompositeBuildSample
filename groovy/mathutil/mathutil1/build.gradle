@@ -11,6 +11,10 @@ sourceCompatibility = 1.8
 
 repositories {
     mavenCentral()
+    maven {
+        name = "internalRepo"
+        url = "../../../repo"
+    }
 }
 
 publishing {
@@ -21,6 +25,12 @@ publishing {
             version = "1.0"
 
             from components.java
+        }
+    }
+    repositories {
+        maven {
+            name = "internalRepo"
+            url = "../../../repo"
         }
     }
 }

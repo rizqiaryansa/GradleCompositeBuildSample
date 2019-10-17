@@ -1,3 +1,3 @@
 rootProject.name = 'mathutil'
 
-include ':mathutil',':mathutil1', ':mathutil2'
+include ':mathutil0',':mathutil1', ':mathutil2'

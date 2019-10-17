@@ -1,14 +1,4 @@
 rootProject.name = 'calculator'
 
-if (file("${rootProject.projectDir}/__composite-enable").exists() && file("../mathutil").exists()) {
-    includeBuild("../mathutil") {
-        dependencySubstitution {
-            substitute module('com.sample.math:mathutil') with project(':')
-            substitute module('mathutil:mathutil') with project(':mathutil')
-//            substitute module('mathutil1:mathutil1') with project(':mathutil1')
-//            substitute module('mathutil2:mathutil2') with project(':mathutil2')
-        }
-    }
-}
-
-apply from: "../../tools/composite_build_settings.gradle"   
+//include ":mathutil"
+//project(':mathutil').projectDir = new File('../mathutil')

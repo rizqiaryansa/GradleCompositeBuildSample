@@ -1,2 +1,4 @@
 group = "com.example.compositebuild"
 version = "1.0-SNAPSHOT"
+
+apply from: "tools/composite_build.gradle"

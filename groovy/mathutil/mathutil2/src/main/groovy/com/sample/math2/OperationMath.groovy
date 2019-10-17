@@ -1,4 +1,4 @@
-package com.sample.math
+package com.sample.math2
 
 class OperationMath {
 

@@ -11,17 +11,27 @@ sourceCompatibility = 1.8
 
 repositories {
     mavenCentral()
+    maven {
+        name = "internalRepo"
+        url = "../../../repo"
+    }
 }
 
 
 publishing {
     publications {
         maven(MavenPublication) {
-            groupId = 'mathutil'
-            artifactId = "mathutil"
+            groupId = 'mathutil0'
+            artifactId = "mathutil0"
             version = "1.0"
 
             from components.java
+        }
+    }
+    repositories {
+        maven {
+            name = "internalRepo"
+            url = "../../../repo"
         }
     }
 }
@@ -29,6 +39,6 @@ publishing {
 dependencies {
     implementation 'org.codehaus.groovy:groovy-all:2.3.11'
     testImplementation group: 'junit', name: 'junit', version: '4.12'
-    implementation project(":mathutil1")
-    implementation project(":mathutil1")
+    implementation 'mathutil1:mathutil1:1.0'
+    implementation 'mathutil2:mathutil2:1.0'
 }

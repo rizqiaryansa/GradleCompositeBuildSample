@@ -9,6 +9,10 @@ version '1.0'
 
 repositories {
     mavenCentral()
+    maven {
+        name = "internalRepo"
+        url = "../../repo"
+    }
 }
 
 publishing {
@@ -21,9 +25,15 @@ publishing {
             from components.java
         }
     }
+    repositories {
+        maven {
+            name = "internalRepo"
+            url = "../../repo"
+        }
+    }
 }
 
 dependencies {
     implementation 'org.codehaus.groovy:groovy-all:2.3.11'
-//    implementation project(":mathutil")
+    implementation 'mathutil0:mathutil0:1.0'
 }

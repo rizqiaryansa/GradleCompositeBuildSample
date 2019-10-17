@@ -1,4 +1,4 @@
-package com.sample.math
+package com.sample.math0
 
 class OperationMath {
 
@@ -6,7 +6,7 @@ class OperationMath {
 
     static Double subtracts(Double a, Double b) { return a - b}
 
-    static Double divide(Double a, Double b) { return a / b}
+    static Double divide(Double a, Double b) { return com.sample.math1.OperationMath.divide(a, b)}
 
     static Double multiply(Double a, Double b) { return a * b}
 

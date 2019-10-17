@@ -17,7 +17,7 @@ task("disableComposite") {
     }
 }
 if (new File("${rootDir}/.compositeScan-enable").exists()) {
-    def fileTreeComposite = fileTree(dir: '.', include: '**/settings.gradle')
+    def fileTreeComposite = fileTree(dir: "${rootDir}", include: '**/settings.gradle')
     fileTreeComposite.each {    file ->
         def path = file.path.toString().replace("/settings.gradle", "");
         if (!"$rootDir".equals("${path}")) {
