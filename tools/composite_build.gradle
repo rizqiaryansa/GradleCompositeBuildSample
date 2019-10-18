@@ -18,6 +18,7 @@ task("disableComposite") {
 }
 
 if (new File("${rootDir}/.compositeScan-enable").exists()) {
+    def startTime = System.nanoTime()
     gradle.ext.compositeProjects.each { path ->
         if (!"$rootDir".equals("${path}")) {
             def lastPaths = path.replace("$rootDir/", "").replace("\"", "").trim().split("/")
@@ -41,4 +42,9 @@ if (new File("${rootDir}/.compositeScan-enable").exists()) {
             }
         }
     }
+    def endTime = System.nanoTime()
+
+    def diff = (endTime - startTime)
+
+    println diff
 }
