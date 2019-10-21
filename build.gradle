@@ -1,2 +1,92 @@
 group = "com.example.compositebuild"
 version = "1.0-SNAPSHOT"
+
+def count = 200
+
+task copyModules {
+    doLast {
+        int i = 1
+        while (i < count) {
+            copy {
+                from 'groovy/mathutil/mathutil0'
+                into "groovy/mathutil/mathutil${i}"
+            }
+            i++
+        }
+    }
+}
+
+task configureModules {
+    dependsOn(copyModules)
+    doLast {
+        int i = 1
+        while (i < count) {
+            def mathDir = new File("groovy/mathutil/mathutil${i}/src/main/groovy/com/sample/math0")
+            mathDir.renameTo("groovy/mathutil/mathutil${i}/src/main/groovy/com/sample/math${i}")
+            mathDir.deleteDir()
+            def operationMathFile = new File("groovy/mathutil/mathutil${i}/src/main/groovy/com/sample/math${i}/OperationMath.groovy")
+            def operationMathText = operationMathFile.text
+            operationMathText = operationMathText.replace("math0", "math${i}")
+            operationMathFile.write(operationMathText)
+            def buildGradleFile = new File("groovy/mathutil/mathutil${i}/build.gradle")
+            def buildGradleText = buildGradleFile.text
+            buildGradleText = buildGradleText.replace("mathutil0", "mathutil${i}")
+            buildGradleFile.write(buildGradleText)
+            def settingsGradleFile = new File("groovy/mathutil/mathutil${i}/settings.gradle")
+            def settingsGradleText = settingsGradleFile.text
+            settingsGradleText = settingsGradleText.replace("mathutil0", "mathutil${i}")
+            settingsGradleFile.write(settingsGradleText)
+            i++
+        }
+    }
+}
+
+task configureMathUtil {
+    dependsOn configureModules
+    doLast {
+        def settingsFile = new File("groovy/mathutil/settings.gradle")
+        def settingsFileText = "rootProject.name = \"mathutil\"\ninclude "
+
+        int i = 0
+        while (i < count - 1) {
+            settingsFileText += "\':mathutil${i}\', "
+            i++
+        }
+
+        settingsFileText += "\':mathutil${i}\'"
+
+        settingsFile.write(settingsFileText)
+    }
+}
+
+task addMathUtilImplementation {
+    dependsOn configureModules
+    doLast {
+        def buildGradleFile = new File("groovy/mathutil/build.gradle")
+        def lines = buildGradleFile.readLines()
+        def lastImplementationIdx = -1
+        for (int i = 0; i < lines.size(); i++) {
+            if (lines[i].contains("implementation")) lastImplementationIdx = i
+        }
+
+        for (int i = 0; i < count; i++) {
+            lines.add(i + 1 + lastImplementationIdx, "\timplementation \'com.sample.math:mathutil${i}:1.0\'")
+        }
+
+        buildGradleFile.write(lines.join("\n"))
+    }
+}
+
+apply from: "tools/composite_build.gradle"
+
+task enableAll {
+    dependsOn tasks.findAll {
+        it.name.startsWith('enablemathutil')
+    }
+}
+
+task disableAll {
+    dependsOn tasks.findAll {
+        it.name.startsWith('disablemathutil')
+    }
+}

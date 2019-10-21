@@ -1,3 +1,8 @@
+def startTime = 0
+def endTime = 0
+def resultTime = 0
+def nanoTime = 1000000
+
 task("enableComposite") {
     group = 'Tools'
     description = "Enable scan composite build"
@@ -17,6 +22,7 @@ task("disableComposite") {
     }
 }
 if (new File("${rootDir}/.compositeScan-enable").exists()) {
+    startTime = System.nanoTime()
     def fileTreeComposite = fileTree(dir: '.', include: '**/settings.gradle')
     fileTreeComposite.each {    file ->
         def path = file.path.toString().replace("/settings.gradle", "");
@@ -42,4 +48,10 @@ if (new File("${rootDir}/.compositeScan-enable").exists()) {
             }
         }
     }
+
+    def endT = System.nanoTime()
+    def diff = (endT - startTime)
+    def resultDiff = diff / nanoTime
+//    resultTime += totalTime
+    println("Create task composite build, Time : $diff ns or $resultDiff ms")
 }

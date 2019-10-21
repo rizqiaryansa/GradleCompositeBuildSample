@@ -1,3 +1,10 @@
+def nanoTime = 1000000
+def resultTime = 0
+def totalTime = 0
+def tempResult = 0
+
+def start = 0
+def end = 0
 
 //scan all folder find setting.gradle
 class compositeModel {
@@ -12,6 +19,7 @@ class compositeModel {
         this.listModuleComposite = listModuleComposite
     }
 }
+
 class tupleComposite {
     String module;
     String project;
@@ -23,28 +31,52 @@ class tupleComposite {
         this.moduleName = moduleName
     }
 }
+
 List<compositeModel> pathComposite = new ArrayList<>()
 
 if (new File("$rootDir/.compositeScan-enable").exists()) {
+
+    def startTime = System.nanoTime()
+
+    //Benchmark waktun scanning file settings.gradle
     def fileTreeComposite = fileTree(dir: "${rootDir}", include: '**/settings.gradle')
     fileTreeComposite.each { file ->
+        println file
         pathComposite.add(new compositeModel("$file"))
     }
+
+    def endTime = System.nanoTime()
+    def setEndTime = (endTime - startTime)
+    def endtTimeMs = setEndTime / nanoTime
+    println("Benchmark waktu scanning file settings.gradle, $setEndTime ns or $endtTimeMs ms")
+
+    //Benchmark waktu untuk memproses masing - masing composite project
+    start = System.nanoTime()
+
     pathComposite.each { file ->
         List<String> listModule = new ArrayList<>()
         if ("$rootDir" != file.pathComposite) {
+
+            //Benchmark waktu pemrosesan struktur project dari masing - masing composite project
             new File("${file.pathComposite}/settings.gradle").eachLine { line ->
                 if (line.startsWith("include") && line.contains(",")) {
                     def tempString = line.replace("include ", "").split(",")
                     tempString.each {
-                        listModule.add("${it.replace("\'", "").replace(":", "").replace(" ", "").trim()}")
+                        def getName = "${it.replace("\'", "").replace(":", "").replace(" ", "").trim()}"
+                        listModule.add("$getName")
                     }
                 } else if (line.startsWith("include")) {
-                    listModule.add("${line.replace("include \":", "").replace("\"", "").trim()}")
+                    def getName = "${line.replace("include \":", "").replace("\"", "").trim()}"
+                    listModule.add("$getName")
                 }
             }
+
         }
+
+        //Benchmark waktu pemrosesan gradle build gradle untuk mencari tahu dependency mana saja yang harus di substitute
+
         List<tupleComposite> tupleComposite = new ArrayList<>()
+//        startTime = System.nanoTime()
         listModule.each { module ->
             def groupId
             def artifactId
@@ -55,18 +87,33 @@ if (new File("$rootDir/.compositeScan-enable").exists()) {
                 if (it.trim().startsWith("artifactId")) {
                     artifactId = it.replace("artifactId =", "").replace("\'", "").trim()
                 }
+
             }
             tupleComposite.add(new tupleComposite(groupId, artifactId, module))
         }
         file.setList(tupleComposite)
-    }
 
+    }
+    end = System.nanoTime()
+    tempResult = (end - start)
+    def tempMs = tempResult / nanoTime
+    println("Benchmark waktu pemrosesan gradle build gradle untuk mencari tahu dependency yg di substitute, " +
+            "Time : $tempResult ns or $tempMs ms")
+
+    //substitution module
+
+    //start
+    //Bencmark waktu untuk substitute binary dependency dengan local project
+    def begin = System.nanoTime()
     pathComposite.each { file ->
+
         if ("$rootDir" != file.pathComposite) {
             if (new File("${file.pathComposite}/.composite-enable").exists()) {
+                println "Including Build " + "${file.pathComposite.replace("$rootDir/", "").trim()}"
                 includeBuild("${file.pathComposite.replace("$rootDir/", "").trim()}") {
                     dependencySubstitution {
                         file.listModuleComposite.each {
+                            println "Substitution Module " + "${it.moduleName}"
                             substitute module("${it.project}:${it.module}") with project(":${it.moduleName}")
                         }
                     }
@@ -74,4 +121,12 @@ if (new File("$rootDir/.compositeScan-enable").exists()) {
             }
         }
     }
+
+    def endT = System.nanoTime()
+    def diff = (endT - begin)
+    def resultDiff = diff / nanoTime
+//    resultTime += totalTime
+    println("Substitue binary dependency, Time : $diff ns or $resultDiff ms")
+
+    //end
 }
