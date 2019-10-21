@@ -77,6 +77,8 @@ def registerDisablerCompositeTask(path, projectName) {
 
 if (new File("${rootDir}/.compositeScan-enable").exists()) {
     def paths = new ArrayList<String>()
+    // Here we use the scanning result from composite_build_settings.gradle so we don't need to scan whole project again
+    // The impact depend on how many file inside the scanned directory (more files = more significant impact)
     def iterator = gradle.ext.compositeProjects.entrySet().iterator()
     while (iterator.hasNext()) {
         def pair = iterator.next()

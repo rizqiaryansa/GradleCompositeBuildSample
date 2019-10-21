@@ -1,5 +1,6 @@
 import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.RecursiveAction
+import java.util.concurrent.RecursiveTask
 
 // save scanning result to gradle object extra property so that we can access it later at composite_build.gradle
 gradle.ext.compositeProjects = new HashMap<String, CompositeProject>()
@@ -154,10 +155,14 @@ def scanComposite() {
     def benchmark = new Benchmarking("Composite Scan")
 
     benchmark.start()
-    def settingFileTree = fileTree(dir: rootDir, include: ['**/settings.gradle', '**/settings.gradle.kts'])
-    settingFileTree.each {
-        gradle.ext.compositeProjects.putIfAbsent(it.path.replaceAll(/\/settings.gradle|.kts/, ""), new CompositeProject(it))
+
+    gradle.ext.compositeProjectPath.each {
+        def settingFileTree = fileTree(dir: it, include: ['**/settings.gradle', '**/settings.gradle.kts'])
+        settingFileTree.each {
+            gradle.ext.compositeProjects.putIfAbsent(it.path.replaceAll(/\/settings.gradle|.kts/, ""), new CompositeProject(it))
+        }
     }
+
     benchmark.stop()
     benchmark.print()
 }
