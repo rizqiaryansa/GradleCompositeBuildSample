@@ -147,9 +147,9 @@ if (new File("$rootDir/.compositeScan-enable").exists()) {
     gradle.ext.compositeProjects = new ArrayList<String>()
     // get all setting files
     def scanningStartTime = System.nanoTime()
-    def settingFileTree = fileTree(dir: rootDir, include: ['**/settings.gradle', '**/settings.gradle.kts', '**/build.gradle', '**/build.gradle.kts'])
+    def settingFileTree = fileTree(dir: rootDir, include: ['**/settings.gradle', '**/settings.gradle.kts'])
     settingFileTree.each {
-        compositeProjects.putIfAbsent(it.path.replaceAll("/settings.gradle|/build.gradle|.kts", ""), new Project(it))
+        compositeProjects.putIfAbsent(it.path.replaceAll("/settings.gradle|.kts", ""), new Project(it))
     }
     def scanningEndTime = System.nanoTime()
 

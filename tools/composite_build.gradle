@@ -17,34 +17,48 @@ task("disableComposite") {
     }
 }
 
-if (new File("${rootDir}/.compositeScan-enable").exists()) {
-    def startTime = System.nanoTime()
-    gradle.ext.compositeProjects.each { path ->
-        if (!"$rootDir".equals("${path}")) {
+def registerEnablerDisablerCompositeTasks(projectsPath) {
+    projectsPath.each { path ->
+        if (rootDir.path != path) {
             def lastPaths = path.replace("$rootDir/", "").replace("\"", "").trim().split("/")
-            def lastPath = lastPaths[lastPaths.size() - 1]
-            task("enable${lastPath}") {
-                group = 'Tools'
-                description = "Enable ${lastPath} composite build"
-                doLast {
-                    new File("${path}/.composite-enable").createNewFile()
-                }
-            }
-            task("disable${lastPath}") {
-                group = 'Tools'
-                description = "Disable ${lastPath} composite build"
-                doLast {
-                    File fileComposite = new File("${path}/.composite-enable")
-                    if (fileComposite.exists()) {
-                        fileComposite.delete()
-                    }
-                }
+            def projectName = lastPaths[lastPaths.size() - 1]
+            registerEnablerCompositeTask(path, projectName)
+            registerDisablerCompositeTask(path, projectName)
+        }
+    }
+}
+
+def registerEnablerCompositeTask(path, projectName) {
+    tasks.register("enable${projectName}") { task ->
+        task.group = 'Tools'
+        task.description = "Enable ${projectName} composite build"
+        task.doLast {
+            new File("${path}/.composite-enable").createNewFile()
+        }
+    }
+}
+
+def registerDisablerCompositeTask(path, projectName) {
+    tasks.register("disable${projectName}") { task ->
+        task.group = 'Tools'
+        task.description = "Disable ${projectName} composite build"
+        task.doLast {
+            File fileComposite = new File("${path}/.composite-enable")
+            if (fileComposite.exists()) {
+                fileComposite.delete()
             }
         }
     }
+}
+
+if (new File("${rootDir}/.compositeScan-enable").exists()) {
+    def startTime = System.nanoTime()
+    registerEnablerDisablerCompositeTasks(gradle.ext.compositeProjects)
     def endTime = System.nanoTime()
 
     def diff = (endTime - startTime)
+    def msDiff = Math.floor(diff / 1000000).toInteger()
+    def nsDiff = diff - msDiff * 1000000
 
-    println diff
+    println "Enabler disabler task registered in ${((msDiff != 0) ? "${msDiff} ms ": "")}${nsDiff} ns"
 }
