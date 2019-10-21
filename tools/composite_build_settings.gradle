@@ -1,43 +1,49 @@
 import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.RecursiveAction
 
-Map<String, Project> compositeProjects = new HashMap<String, Project>()
-Map<String, String> includedProjects = new HashMap<String, String>()
+// save scanning result to gradle object extra property so that we can access it later at composite_build.gradle
+gradle.ext.compositeProjects = new HashMap<String, CompositeProject>()
 
-class Project {
+class CompositeProject {
     def settingsGradleFile
-    def buildGradleFile
-    def groupId
-    def artifactId
+    def includedProjects = new HashMap<String, IncludedProject>()
 
-    Project(File settingsFile) {
-        this.settingsGradleFile = settingsFile
-        this.buildGradleFile = new File(settingsFile.path.replace("settings", "build"))
+    CompositeProject(File settingsFile) { this.settingsGradleFile = settingsFile }
+}
+
+class IncludedProject {
+    def groupId, artifactId, moduleName, path
+
+    IncludedProject(groupId, artifactId, moduleName, path) {
+        this.groupId = groupId
+        this.artifactId = artifactId
+        this.moduleName = moduleName
+        this.path = path
     }
 
-    Project(String path) {
-        this.buildGradleFile = new File("$path/build.gradle")
-        if (!this.buildGradleFile.exists()) {
-            this.buildGradleFile = new File("$path/build.gradle.kts")
+    def getGradleFile() {
+        def gradleFile = new File("$path/build.gradle")
+        if (!gradleFile.exists()) {
+            gradleFile = new File("$path/build.gradle.kts")
         }
+
+        return gradleFile
     }
 }
 
 class ForkJoinFileProcessor extends RecursiveAction {
 
     static String rootDir
-    static Map<String, String> includedProjects
     static final int MAX_FILE_PER_THREAD = 50
 
-    Map<String, Project> compositeProjects
+    Map<String, CompositeProject> compositeProjects
 
-    ForkJoinFileProcessor(Map<String, Project> compositeProjects, String rootDir, Map<String, String> includedProjects) {
+    ForkJoinFileProcessor(Map<String, CompositeProject> compositeProjects, String rootDir) {
         this.compositeProjects = compositeProjects
         this.rootDir = rootDir
-        this.includedProjects = includedProjects
     }
 
-    ForkJoinFileProcessor(Map<String, Project> compositeProjects) {
+    ForkJoinFileProcessor(Map<String, CompositeProject> compositeProjects) {
         this.compositeProjects = compositeProjects
     }
 
@@ -50,16 +56,18 @@ class ForkJoinFileProcessor extends RecursiveAction {
         }
     }
 
-    void createSubTasks() {
-        ForkJoinFileProcessor leftTask
-        ForkJoinFileProcessor rightTask
+    def createSubTasks() {
+        def leftTask
+        def rightTask
 
-        Map<String, Project> left = new HashMap<String, Project>()
-        Map<String, Project> right = new HashMap<String, Project>()
+        def left = new HashMap<String, CompositeProject>()
+        def right = new HashMap<String, CompositeProject>()
 
-        Iterator iterator = compositeProjects.entrySet().iterator()
+        def iterator = compositeProjects.entrySet().iterator()
+
         while (iterator.hasNext()) {
             def pair = iterator.next()
+
             if (left.size() < iterator.size() / 2) {
                 left.put(pair.key, pair.value)
             } else {
@@ -70,121 +78,133 @@ class ForkJoinFileProcessor extends RecursiveAction {
                 leftTask = new ForkJoinFileProcessor(left)
                 leftTask.fork()
             }
+
             if (!iterator.hasNext()) {
                 rightTask = new ForkJoinFileProcessor(right)
                 rightTask.fork()
             }
+        }
 
-            if (leftTask != null) leftTask.join()
-            if (rightTask != null) rightTask.join()
+        if (leftTask != null) leftTask.join()
+        if (rightTask != null) rightTask.join()
+    }
+
+    def processFile() {
+        def compositeIterator = compositeProjects.entrySet().iterator()
+        while (compositeIterator.hasNext()) {
+            def compositeProject = compositeIterator.next()
+
+            if (rootDir.toString() != compositeProject.key.toString()) {
+                processSettingsGradle compositeProject.key, compositeProject.value
+
+                def includedIterator = compositeProject.value.includedProjects.entrySet().iterator()
+                while (includedIterator.hasNext()) {
+                    processBuildGradle includedIterator.next().value
+                }
+            }
         }
     }
 
-    void processFile() {
-        def iterator = compositeProjects.entrySet().iterator()
-        while (iterator.hasNext()) {
-            def compositeProject = iterator.next()
-            if (rootDir.toString() != compositeProject.key.toString()) {
-                compositeProject.value.settingsGradleFile.eachLine { line ->
-                    if (line.startsWith("include") && !line.startsWith("includeBuild")) {
-                        String[] tempString = line.split("[\'\"]")
-                        for (int i = 1; i < tempString.size(); i += 2) {
-                            includedProjects.put(tempString[i],
-                                    "${compositeProject.key}${tempString[i].replace(":", "/")}")
-                        }
-                    } else if (line.contains("projectDir")) {
-                        String[] tempString = line.split("[\'\"]")
-                        // we already get it's relative path (Ex: ../../xxProject or /a/b/c/xxProject)
-                        // we need to get it's absolute path (Ex: /Users/nakama/ProjectA/xxProject)
-                        def relativePath = tempString[3].split("/")
-                        def absolutePath = compositeProject.key.split("/").toList()
-
-                        relativePath.each {
-                            if (it == "..") {
-                                absolutePath.removeLast()
-                            } else if (!it.empty) {
-                                absolutePath.add(it)
-                            }
-                        }
-
-                        includedProjects.put(tempString[1], absolutePath.join("/"))
-                    }
-                }
+    static def processBuildGradle(IncludedProject project) {
+        project.getGradleFile().eachLine { line ->
+            if (line.trim().startsWith("groupId")) {
+                project.groupId = line.split(/['"]/)[1]
+            } else if (line.trim().startsWith("artifactId")) {
+                project.artifactId = line.split(/['"]/)[1]
             }
         }
+    }
 
-        // add the included projects to composite project list if not present
-        includedProjects.entrySet().each {
-            if (!compositeProjects.containsKey(it.value)) {
-                def settingsGradleFile = new File("${it.value}/settings.gradle")
-                if (!settingsGradleFile.exists()) {
-                    settingsGradleFile = new File("${it.value}/settings.gradle.kts")
+    static processSettingsGradle(path, compositeProject) {
+        compositeProject.settingsGradleFile.eachLine { line ->
+            if (line.startsWith("include") && !line.startsWith("includeBuild")) {
+                String[] tempString = line.split(/['"]/)
+                for (int i = 1; i < tempString.size(); i += 2) {
+                    def includedPath = "${path}/${tempString[i].replace(":", "")}".replace("//", "/")
+                    def includedProject = new IncludedProject(null, null, tempString[i], includedPath)
+                    compositeProject.includedProjects.put(tempString[i], includedProject)
                 }
-                if (settingsGradleFile.exists()) {
-                    compositeProjects.putIfAbsent(it.value, new Project(settingsGradleFile))
-                } else {
-                    compositeProjects.putIfAbsent(it.value, new Project(it.value.toString()))
-                }
-            }
-        }
-
-        // now we need to read each project build.gradle file in order to get it's groupId and artifactId
-        compositeProjects.each { project ->
-            if (rootDir.toString() != project.key.toString()) {
-                project.value.buildGradleFile.eachLine {
-                    if (it.trim().startsWith("groupId")) {
-                        project.value.groupId = it.split("[\'\"]")[1]
-                    } else if (it.trim().startsWith("artifactId")) {
-                        project.value.artifactId = it.split("[\'\"]")[1]
-                    }
-                }
+            } else if (line.contains("projectDir")) {
+                def tempString = line.split(/['"]/)
+                compositeProject.includedProjects.get(tempString[1]).path = "${path}/${tempString[3]}".replace("//", "/")
             }
         }
     }
 }
 
-if (new File("$rootDir/.compositeScan-enable").exists()) {
-    gradle.ext.compositeProjects = new ArrayList<String>()
-    // get all setting files
-    def scanningStartTime = System.nanoTime()
+class Benchmarking {
+    def what, startTime, endTime
+
+    Benchmarking (what) { this.what = what }
+
+    def start() { startTime = System.nanoTime() }
+
+    def stop() { endTime = System.nanoTime() }
+
+    def print() {
+        def diff = (endTime - startTime)
+        def msDiff = Math.floor(diff / 1000000).toInteger()
+        def nsDiff = diff - msDiff * 1000000
+
+        println "$what takes ${((msDiff != 0) ? "${msDiff} ms ": "")}${nsDiff} ns"
+    }
+}
+
+def scanComposite() {
+    def benchmark = new Benchmarking("Composite Scan")
+
+    benchmark.start()
     def settingFileTree = fileTree(dir: rootDir, include: ['**/settings.gradle', '**/settings.gradle.kts'])
     settingFileTree.each {
-        compositeProjects.putIfAbsent(it.path.replaceAll("/settings.gradle|.kts", ""), new Project(it))
+        gradle.ext.compositeProjects.putIfAbsent(it.path.replaceAll(/\/settings.gradle|.kts/, ""), new CompositeProject(it))
     }
-    def scanningEndTime = System.nanoTime()
+    benchmark.stop()
+    benchmark.print()
+}
 
-    def processingCompositeStartTime = System.nanoTime()
+def processComposite() {
+    def benchmark = new Benchmarking("Processing projects")
+    benchmark.start()
+
     ForkJoinPool forkJoinPool = new ForkJoinPool()
-    forkJoinPool.invoke(new ForkJoinFileProcessor(compositeProjects, rootDir.path, includedProjects))
-    def processingCompositeEndTime = System.nanoTime()
+    forkJoinPool.invoke(new ForkJoinFileProcessor(gradle.ext.compositeProjects, rootDir.path))
 
-    def iterator = compositeProjects.entrySet().iterator()
+    benchmark.stop()
+    benchmark.print()
+}
 
-    def substitutingStartTime = System.nanoTime()
-    while (iterator.hasNext()) {
-        def pair = iterator.next()
-        if (pair.key != rootDir.toString()) {
-            if (!gradle.ext.compositeProjects.contains(pair.key.toString())) {
-                gradle.ext.compositeProjects.add(pair.key.toString())
-            }
-            if (new File("${pair.key}/.composite-enable").exists()) {
-                includeBuild(pair.key) {
-                    if (pair.value.artifactId != null && pair.value.groupId != null) {
-                        dependencySubstitution {
-                            substitute module("${pair.value.groupId}:${pair.value.artifactId}") with project(":")
+def substituteBinaryDependencies() {
+    def compositeIterator = gradle.ext.compositeProjects.entrySet().iterator()
+    def benchmark = new Benchmarking("Processing projects")
+    benchmark.start()
+
+    while (compositeIterator.hasNext()) {
+        def compositePair = compositeIterator.next()
+        if (compositePair.key != rootDir.toString()) {
+            if (new File("${compositePair.key}/.composite-enable").exists()) {
+                includeBuild(compositePair.key) {
+                    dependencySubstitution {
+                        def includedIterator = compositePair.value.includedProjects.entrySet().iterator()
+
+                        while (includedIterator.hasNext()) {
+                            def includedPair = includedIterator.next()
+
+                            if (includedPair.value.groupId != null && includedPair.value.artifactId != null) {
+                                substitute module("${includedPair.value.groupId}:${includedPair.value.artifactId}") with project("${includedPair.value.moduleName}")
+                            }
                         }
                     }
                 }
             }
         }
     }
-    def substitutingEndTime = System.nanoTime()
 
-    def scanningDiffTime = (scanningEndTime - scanningStartTime)
-    def processingCompositeDiffTime = (processingCompositeEndTime - processingCompositeStartTime)
-    def substitutingDiffTime = (substitutingEndTime - substitutingStartTime)
+    benchmark.stop()
+    benchmark.print()
+}
 
-    println "Scanning projects takes ${scanningDiffTime} ns or ${scanningDiffTime / 1000000} ms"
-    println "Processing projects takes ${processingCompositeDiffTime} ns or ${processingCompositeDiffTime / 1000000} ms"
-    println "Substituting projects takes ${substitutingDiffTime} ns or ${substitutingDiffTime / 1000000} ms"
+if (new File("$rootDir/.compositeScan-enable").exists()) {
+    scanComposite()
+    processComposite()
+    substituteBinaryDependencies()
 }

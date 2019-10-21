@@ -2,5 +2,5 @@ rootProject.name = 'calculator'
 
 // it will cause duplication because we already include this project and then the tools script will
 // include it again using includeBuild
-//include ':mathutil'
-//project(':mathutil').projectDir = new File('../mathutil')
+include ':mathutil'
+project(':mathutil').projectDir = new File('../mathutil')

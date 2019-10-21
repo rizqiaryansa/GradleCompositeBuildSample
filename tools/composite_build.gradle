@@ -1,5 +1,5 @@
 task("enableComposite") {
-    group = 'Tools'
+    group = 'CompositeEnabler'
     description = "Enable scan composite build"
     doLast {
         new File("$rootDir/.compositeScan-enable").createNewFile()
@@ -7,7 +7,7 @@ task("enableComposite") {
 }
 
 task("disableComposite") {
-    group = 'Tools'
+    group = 'CompositeDisabler'
     description = "disable scan composite build"
     doLast {
         File fileComposite = new File("$rootDir/.compositeScan-enable")
@@ -17,7 +17,28 @@ task("disableComposite") {
     }
 }
 
+class Benchmarking {
+    def what, startTime, endTime
+
+    Benchmarking (what) { this.what = what }
+
+    def start() { startTime = System.nanoTime() }
+
+    def stop() { endTime = System.nanoTime() }
+
+    def print() {
+        def diff = (endTime - startTime)
+        def msDiff = Math.floor(diff / 1000000).toInteger()
+        def nsDiff = diff - msDiff * 1000000
+
+        println "$what takes ${((msDiff != 0) ? "${msDiff} ms ": "")}${nsDiff} ns"
+    }
+}
+
 def registerEnablerDisablerCompositeTasks(projectsPath) {
+    def benchmark = new Benchmarking("Creating enabler and disabler tasks")
+    benchmark.start()
+
     projectsPath.each { path ->
         if (rootDir.path != path) {
             def lastPaths = path.replace("$rootDir/", "").replace("\"", "").trim().split("/")
@@ -26,11 +47,14 @@ def registerEnablerDisablerCompositeTasks(projectsPath) {
             registerDisablerCompositeTask(path, projectName)
         }
     }
+
+    benchmark.stop()
+    benchmark.print()
 }
 
 def registerEnablerCompositeTask(path, projectName) {
     tasks.register("enable${projectName}") { task ->
-        task.group = 'Tools'
+        task.group = 'CompositeEnabler'
         task.description = "Enable ${projectName} composite build"
         task.doLast {
             new File("${path}/.composite-enable").createNewFile()
@@ -40,7 +64,7 @@ def registerEnablerCompositeTask(path, projectName) {
 
 def registerDisablerCompositeTask(path, projectName) {
     tasks.register("disable${projectName}") { task ->
-        task.group = 'Tools'
+        task.group = 'CompositeDisabler'
         task.description = "Disable ${projectName} composite build"
         task.doLast {
             File fileComposite = new File("${path}/.composite-enable")
@@ -52,13 +76,12 @@ def registerDisablerCompositeTask(path, projectName) {
 }
 
 if (new File("${rootDir}/.compositeScan-enable").exists()) {
-    def startTime = System.nanoTime()
-    registerEnablerDisablerCompositeTasks(gradle.ext.compositeProjects)
-    def endTime = System.nanoTime()
+    def paths = new ArrayList<String>()
+    def iterator = gradle.ext.compositeProjects.entrySet().iterator()
+    while (iterator.hasNext()) {
+        def pair = iterator.next()
+        paths.add(pair.key)
+    }
 
-    def diff = (endTime - startTime)
-    def msDiff = Math.floor(diff / 1000000).toInteger()
-    def nsDiff = diff - msDiff * 1000000
-
-    println "Enabler disabler task registered in ${((msDiff != 0) ? "${msDiff} ms ": "")}${nsDiff} ns"
+    registerEnablerDisablerCompositeTasks(paths)
 }

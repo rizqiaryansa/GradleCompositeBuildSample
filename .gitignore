@@ -1,4 +1,4 @@
-# Project exclude paths
+# CompositeProject exclude paths
 .composite-enable
 # Built application files
 *.apk

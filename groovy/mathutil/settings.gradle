@@ -1,2 +1,3 @@
 rootProject.name = "mathutil"
-//include ':mathutil0', ':mathutil1', ':mathutil2', ':mathutil3', ':mathutil4', ':mathutil5', ':mathutil6', ':mathutil7', ':mathutil8', ':mathutil9', ':mathutil10', ':mathutil11', ':mathutil12', ':mathutil13', ':mathutil14', ':mathutil15', ':mathutil16', ':mathutil17', ':mathutil18', ':mathutil19'
+
+include ':mathutil0'
