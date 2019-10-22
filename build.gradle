@@ -1,7 +1,7 @@
 group = "com.example.compositebuild"
 version = "1.0-SNAPSHOT"
 
-def count = 5
+def count = 25
 
 //Test Case 1
 task copyModules {
@@ -26,8 +26,6 @@ task copyModules1 {
         boolean isFirst = true
         while (i <= count) {
 
-//            setNameSettings(i, j, count)
-
             for (int k = 0; k < 3; k++) {
 
                 if (isFirst && k > 1) {
@@ -48,6 +46,127 @@ task copyModules1 {
                 copyAttributeGradle(i + 1)
             }
 
+            i++
+        }
+    }
+}
+
+//Test Case 3
+task copyModules2 {
+    doLast {
+        int i = 1
+        int j = 1
+        boolean isFirst = true
+        while (i <= count) {
+
+            for (int k = 0; k < count; k++) {
+
+                if (isFirst && k > 1) {
+                    isFirst = false
+                    continue
+                }
+
+                copy {
+                    from 'groovy/basemathutil1/mathutil0'
+                    into "groovy/basemathutil${i}/mathutil${j}"
+                }
+
+                j++
+            }
+
+
+            if (i + 1 <= count) {
+                copyAttributeGradle2(i + 1)
+            }
+
+            i++
+        }
+    }
+}
+
+//Test Case 3
+def copyAttributeGradle2(def i) {
+
+    copy {
+        from 'groovy/basemathutil1/build.gradle'
+        into "groovy/basemathutil${i}"
+    }
+
+    copy {
+        from 'groovy/basemathutil1/gradle.properties'
+        into "groovy/basemathutil${i}"
+    }
+
+    copy {
+        from 'groovy/basemathutil1/settings.gradle'
+        into "groovy/basemathutil${i}"
+    }
+
+    copy {
+        from 'groovy/basemathutil1/src'
+        into "groovy/basemathutil${i}"
+    }
+}
+
+//Test Case 3
+task configureModules2 {
+    dependsOn(copyModules2)
+    doLast {
+        int i = 1
+        int j = 1
+        boolean isFirst = true
+
+        while (i <= count) {
+
+            for (int k = 0; k < count; k++) {
+
+                if (isFirst && k > 1) {
+                    isFirst = false
+                    continue
+                }
+
+                def mathDir = new File("groovy/basemathutil${i}/mathutil${j}/src/main/groovy/com/sample/math0")
+                mathDir.renameTo("groovy/basemathutil${i}/mathutil${j}/src/main/groovy/com/sample/math${j}")
+                mathDir.deleteDir()
+                def operationMathFile = new File("groovy/basemathutil${i}/mathutil${j}/src/main/groovy/com/sample/math${j}/OperationMath.groovy")
+                def operationMathText = operationMathFile.text
+                operationMathText = operationMathText.replace("math0", "math${j}")
+                operationMathFile.write(operationMathText)
+                def buildGradleFile = new File("groovy/basemathutil${i}/mathutil${j}/build.gradle")
+                def buildGradleText = buildGradleFile.text
+                buildGradleText = buildGradleText.replace("mathutil0", "mathutil${j}")
+                buildGradleFile.write(buildGradleText)
+                def settingsGradleFile = new File("groovy/basemathutil${i}/mathutil${j}/settings.gradle")
+                def settingsGradleText = settingsGradleFile.text
+                settingsGradleText = settingsGradleText.replace("mathutil0", "mathutil${j}")
+                settingsGradleFile.write(settingsGradleText)
+
+                j++
+            }
+            i++
+        }
+    }
+}
+
+//Test Case 3
+task setNameSettings2 {
+
+    doLast {
+        int i = 1
+        int j = 0
+
+        while (i <= count) {
+            def settingsFile = new File("groovy/basemathutil${i}/settings.gradle")
+            def settingsFileText = "rootProject.name = \"basemathutil${i}\"\ninclude "
+
+            settingsFileText += "\':mathutil${j}\'"
+            j++
+            for (int k = 0; k < count - 1; k++) {
+                settingsFileText += ", \':mathutil${j}\' "
+
+                j++
+            }
+            settingsFile.write(settingsFileText)
             i++
         }
     }
@@ -77,6 +196,7 @@ task setNameSettings {
     }
 }
 
+//Test Case 2
 task rootSettings {
     doLast {
         int i = 1

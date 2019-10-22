@@ -41,7 +41,6 @@ if (new File("$rootDir/.compositeScan-enable").exists()) {
     //Benchmark waktun scanning file settings.gradle
     def fileTreeComposite = fileTree(dir: "${rootDir}", include: '**/settings.gradle')
     fileTreeComposite.each { file ->
-        println file
         pathComposite.add(new compositeModel("$file"))
     }
 
@@ -109,11 +108,11 @@ if (new File("$rootDir/.compositeScan-enable").exists()) {
 
         if ("$rootDir" != file.pathComposite) {
             if (new File("${file.pathComposite}/.composite-enable").exists()) {
-                println "Including Build " + "${file.pathComposite.replace("$rootDir/", "").trim()}"
+//                println "Including Build " + "${file.pathComposite.replace("$rootDir/", "").trim()}"
                 includeBuild("${file.pathComposite.replace("$rootDir/", "").trim()}") {
                     dependencySubstitution {
                         file.listModuleComposite.each {
-                            println "Substitution Module " + "${it.moduleName}"
+//                            println "Substitution Module " + "${it.moduleName}"
                             substitute module("${it.project}:${it.module}") with project(":${it.moduleName}")
                         }
                     }
