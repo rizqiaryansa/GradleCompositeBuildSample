@@ -1,8 +1,2 @@
-rootProject.name = 'GradleCompositeBuildExample'
-
-include ':groovy:calculator'
-include ':groovy:mathutil'
-include ':tools'
-
-
+rootProject.name = "GradleCompositeBuildExample"
 apply from: "tools/composite_build_settings.gradle"

@@ -11,25 +11,27 @@ version '1.0'
 
 repositories {
     mavenCentral()
-    mavenLocal()
+    maven {
+        url = '../../repo'
+    }
 }
 
 dependencies {
     compile 'org.codehaus.groovy:groovy-all:2.3.11'
-    implementation "mathutil:mathutil:1.0"
+    implementation "com.sample.basemath:basemathutil1:1.0"
 }
 
+////
+//tasks.register("enableComposite") {
+//    doFirst {
+//        def file = file("composite-enable")
+//        if (!file.exists()) file.createNewFile()
+//    }
+//}
 //
-tasks.register("enableComposite") {
-    doFirst {
-        def file = file("composite-enable")
-        if (!file.exists()) file.createNewFile()
-    }
-}
-
-tasks.register("disableComposite") {
-    doFirst {
-        def file = file("composite-enable")
-        if (file.exists()) file.delete()
-    }
-}
+//tasks.register("disableComposite") {
+//    doFirst {
+//        def file = file("composite-enable")
+//        if (file.exists()) file.delete()
+//    }
+//}

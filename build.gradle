@@ -1,38 +1,182 @@
 group = "com.example.compositebuild"
 version = "1.0-SNAPSHOT"
 
-def count = 200
+def count = 5
 
+//Test Case 1
 task copyModules {
     doLast {
         int i = 1
         while (i < count) {
             copy {
-                from 'groovy/mathutil/mathutil0'
-                into "groovy/mathutil/mathutil${i}"
+                from 'groovy/basemathutil1/mathutil0'
+                into "groovy/basemathutil1/mathutil${i}"
             }
             i++
         }
     }
 }
 
+
+//Test Case 2
+task copyModules1 {
+    doLast {
+        int i = 1
+        int j = 1
+        boolean isFirst = true
+        while (i <= count) {
+
+//            setNameSettings(i, j, count)
+
+            for (int k = 0; k < 3; k++) {
+
+                if (isFirst && k > 1) {
+                    isFirst = false
+                    continue
+                }
+
+                copy {
+                    from 'groovy/basemathutil1/mathutil0'
+                    into "groovy/basemathutil${i}/mathutil${j}"
+                }
+
+                j++
+            }
+
+
+            if (i + 1 <= count) {
+                copyAttributeGradle(i + 1)
+            }
+
+            i++
+        }
+    }
+}
+
+//Test Case 2
+task setNameSettings {
+
+    doLast {
+        int i = 1
+        int j = 0
+
+        while (i <= count) {
+            def settingsFile = new File("groovy/basemathutil${i}/settings.gradle")
+            def settingsFileText = "rootProject.name = \"basemathutil${i}\"\ninclude "
+
+            settingsFileText += "\':mathutil${j}\'"
+            j++
+            for (int k = 0; k < 2; k++) {
+                settingsFileText += ", \':mathutil${j}\' "
+
+                j++
+            }
+            settingsFile.write(settingsFileText)
+            i++
+        }
+    }
+}
+
+task rootSettings {
+    doLast {
+        int i = 1
+        def settingsFile = new File("settings.gradle")
+        def settingsFileText = "rootProject.name = \"GradleCompositeBuildExample\"\napply from: \"" +
+                "tools/composite_build_settings.gradle\"\ninclude \":tools\"\ninclude "
+        settingsFileText += "\':groovy:basemathutil${i}\'"
+
+        i++
+
+        while (i <= count) {
+            settingsFileText += ", \':groovy:basemathutil${i}\' "
+            settingsFile.write(settingsFileText)
+            i++
+        }
+    }
+}
+
+//Test case 2
+def copyAttributeGradle(def i) {
+
+    copy {
+        from 'groovy/basemathutil1/build.gradle'
+        into "groovy/basemathutil${i}"
+    }
+
+    copy {
+        from 'groovy/basemathutil1/gradle.properties'
+        into "groovy/basemathutil${i}"
+    }
+
+    copy {
+        from 'groovy/basemathutil1/settings.gradle'
+        into "groovy/basemathutil${i}"
+    }
+
+    copy {
+        from 'groovy/basemathutil1/src'
+        into "groovy/basemathutil${i}"
+    }
+}
+
+//Test Case 2
+task configureModules1 {
+    dependsOn(copyModules1)
+    doLast {
+        int i = 1
+        int j = 1
+        boolean isFirst = true
+
+        while (i <= count) {
+
+            for (int k = 0; k < 3; k++) {
+
+                if (isFirst && k > 1) {
+                    isFirst = false
+                    continue
+                }
+
+                def mathDir = new File("groovy/basemathutil${i}/mathutil${j}/src/main/groovy/com/sample/math0")
+                mathDir.renameTo("groovy/basemathutil${i}/mathutil${j}/src/main/groovy/com/sample/math${j}")
+                mathDir.deleteDir()
+                def operationMathFile = new File("groovy/basemathutil${i}/mathutil${j}/src/main/groovy/com/sample/math${j}/OperationMath.groovy")
+                def operationMathText = operationMathFile.text
+                operationMathText = operationMathText.replace("math0", "math${j}")
+                operationMathFile.write(operationMathText)
+                def buildGradleFile = new File("groovy/basemathutil${i}/mathutil${j}/build.gradle")
+                def buildGradleText = buildGradleFile.text
+                buildGradleText = buildGradleText.replace("mathutil0", "mathutil${j}")
+                buildGradleFile.write(buildGradleText)
+                def settingsGradleFile = new File("groovy/basemathutil${i}/mathutil${j}/settings.gradle")
+                def settingsGradleText = settingsGradleFile.text
+                settingsGradleText = settingsGradleText.replace("mathutil0", "mathutil${j}")
+                settingsGradleFile.write(settingsGradleText)
+
+                j++
+            }
+            i++
+        }
+    }
+}
+
+//Test Case 1
 task configureModules {
     dependsOn(copyModules)
     doLast {
         int i = 1
         while (i < count) {
-            def mathDir = new File("groovy/mathutil/mathutil${i}/src/main/groovy/com/sample/math0")
-            mathDir.renameTo("groovy/mathutil/mathutil${i}/src/main/groovy/com/sample/math${i}")
+            def mathDir = new File("groovy/basemathutil/mathutil${i}/src/main/groovy/com/sample/math0")
+            mathDir.renameTo("groovy/basemathutil/mathutil${i}/src/main/groovy/com/sample/math${i}")
             mathDir.deleteDir()
-            def operationMathFile = new File("groovy/mathutil/mathutil${i}/src/main/groovy/com/sample/math${i}/OperationMath.groovy")
+            def operationMathFile = new File("groovy/basemathutil/mathutil${i}/src/main/groovy/com/sample/math${i}/OperationMath.groovy")
             def operationMathText = operationMathFile.text
             operationMathText = operationMathText.replace("math0", "math${i}")
             operationMathFile.write(operationMathText)
-            def buildGradleFile = new File("groovy/mathutil/mathutil${i}/build.gradle")
+            def buildGradleFile = new File("groovy/basemathutil/mathutil${i}/build.gradle")
             def buildGradleText = buildGradleFile.text
             buildGradleText = buildGradleText.replace("mathutil0", "mathutil${i}")
             buildGradleFile.write(buildGradleText)
-            def settingsGradleFile = new File("groovy/mathutil/mathutil${i}/settings.gradle")
+            def settingsGradleFile = new File("groovy/basemathutil/mathutil${i}/settings.gradle")
             def settingsGradleText = settingsGradleFile.text
             settingsGradleText = settingsGradleText.replace("mathutil0", "mathutil${i}")
             settingsGradleFile.write(settingsGradleText)
@@ -81,12 +225,12 @@ apply from: "tools/composite_build.gradle"
 
 task enableAll {
     dependsOn tasks.findAll {
-        it.name.startsWith('enablemathutil')
+        it.name.startsWith('enable') && !it.name.startsWith('enableComposite') && !it.name.startsWith('enableAll')
     }
 }
 
 task disableAll {
     dependsOn tasks.findAll {
-        it.name.startsWith('disablemathutil')
+        it.name.startsWith('disablemathutil') && !it.name.startsWith('disableComposite') && !it.name.startsWith('disableAll')
     }
 }
