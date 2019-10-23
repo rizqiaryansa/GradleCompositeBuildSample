@@ -157,7 +157,8 @@ def scanComposite() {
     benchmark.start()
 
     gradle.ext.compositeProjectPath.each {
-        def settingFileTree = fileTree(dir: it, include: ['**/settings.gradle', '**/settings.gradle.kts'])
+        def settingFileTree = new ArrayList<File>()
+        traverse(new File(it), settingFileTree)
         settingFileTree.each {
             gradle.ext.compositeProjects.putIfAbsent(it.path.replaceAll(/\/settings.gradle|.kts/, ""), new CompositeProject(it))
         }
@@ -206,6 +207,30 @@ def substituteBinaryDependencies() {
 
     benchmark.stop()
     benchmark.print()
+}
+
+def traverse(File path, ArrayList<File> settingsFiles) {
+    if (path.isDirectory()) {
+        if (isPathExcluded(path)) {
+            path.eachFile {
+                if (it.isFile()) {
+                    if (it.name.matches("settings.gradle|settings.gradle.kts")) {
+                        settingsFiles.add(it)
+                    }
+                } else if (isPathExcluded(it)) {
+                    traverse(it, settingsFiles)
+                }
+            }
+        }
+    } else {
+        if (path.name.matches("settings.gradle|settings.gradle.kts")) {
+            settingsFiles.add(path)
+        }
+    }
+}
+
+def isPathExcluded(path) {
+    return !path.name.matches("src|.gradle|.idea|build")
 }
 
 if (new File("$rootDir/.compositeScan-enable").exists()) {

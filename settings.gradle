@@ -1,7 +1,8 @@
 rootProject.name = 'GradleCompositeBuildExample'
 
 gradle.ext.compositeProjectPath = [
-        "$rootDir/groovy"
+        "$rootDir/groovy",
+        "../RootProject/ProjectA/ProjectB"
 ]
 
 apply from: "tools/composite_build_settings.gradle"
